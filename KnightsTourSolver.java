@@ -4,7 +4,6 @@ import java.util.ArrayList;
  * @author nbreems
  */
 public final class KnightsTourSolver {
-
     /**
      *
      * @param board
@@ -14,22 +13,73 @@ public final class KnightsTourSolver {
      * @return
      */
     static public boolean solveKnightsTour(KnightsTourBoard board, int x, int y, int num) {
+        ArrayList<ArrayList<Integer[]>> listOfMoveLists = new ArrayList<>();
+        ArrayList<Integer[]> validMoves = getWarnsdorfRuleMoves(board, x, y);
+        for (Integer[] move : validMoves) {
+            ArrayList<Integer[]> moveList = new ArrayList<>();
+            moveList.add(move);
+            listOfMoveLists.add(moveList);
+        }
+        return solveKnightsTourRecursive(board, x, y, num, listOfMoveLists);
+    }
+
+    /**
+     * attempts to solve using warnsdorf's rule from a given point
+     * 
+     * @param board
+     * @param x
+     * @param y
+     * @param num The number of the next square to go to
+     * @return 
+     */
+    static public boolean solveKnightsTourRecursive(KnightsTourBoard board, int x, int y, int num, ArrayList<ArrayList<Integer[]>> listOfMoveLists) {
+        ArrayList<ArrayList<Integer[]>> newListOfMoveLists = new ArrayList<>();
+        for (ArrayList<Integer[]> moveList : listOfMoveLists) {
+            // clear the board
+            for (int i = 0; i < board.getBoardSize(); i++) {
+                for (int j = 0; j < board.getBoardSize(); j++) {
+                    if (board.getPositionValue(i, j) > 1)
+                        board.setPositionValue(i, j, -1);
+                }
+            }
+            // apply move list
+            int currentx = x;
+            int currenty = y;
+            int nextnum = 2;
+            for (Integer[] move : moveList) {
+                currentx += move[0];
+                currenty += move[1];
+                board.setPositionValue(x, y, nextnum);
+                nextnum++;
+            }
+            // find branching move lists and try to solve them
+            for (Integer[] move : getWarnsdorfRuleMoves(board, x, y)) {
+                ArrayList<Integer[]> newMoveList = new ArrayList<>(moveList);
+                newMoveList.add(move);
+                newListOfMoveLists.add(newMoveList);
+                Integer[] testMove = newListOfMoveLists.getLast().getLast();
+                if (attemptToSolve(board, currentx + testMove[0], currenty + testMove[1], nextnum)) {
+                    return true;
+                }
+            }
+        }
+        return solveKnightsTourRecursive(board, x, y, num, newListOfMoveLists);
+    }
+
+    /**
+     *
+     * @param board
+     * @param x
+     * @param y
+     * @param num The number of the next square to go to
+     * @return false if solving fails, true if solving succeeds
+     */
+    static public boolean attemptToSolve(KnightsTourBoard board, int x, int y, int num) {
         int numOfSquares = board.getBoardSize() * board.getBoardSize();
-        ArrayList<Integer[]> initialValidMoves = getWarnsdorfRuleMoves(board, x, y);
-        ArrayList<Integer[]> validMoves = new ArrayList<>(initialValidMoves);
+        ArrayList<Integer[]> validMoves = new ArrayList<>(getWarnsdorfRuleMoves(board, x, y));
         int nextSquare = num;
         int currentx = x;
         int currenty = y;
-        while (!validMoves.isEmpty()) {
-            currentx += validMoves.getFirst()[0];
-            currenty += validMoves.getFirst()[1];
-            board.setPositionValue(currentx, currenty, nextSquare);
-            nextSquare++;
-            validMoves = getWarnsdorfRuleMoves(board, currentx, currenty);
-        }
-        if (nextSquare > numOfSquares) {
-            return true;
-        }
         // backtrack the board
         for (int i = 0; i < board.getBoardSize(); i++) {
             for (int j = 0; j < board.getBoardSize(); j++) {
@@ -37,15 +87,14 @@ public final class KnightsTourSolver {
                     board.setPositionValue(i, j, -1);
             }
         }
-        // try all other moves from this position
-        for (Integer[] move : initialValidMoves) {
-            board.setPositionValue(x+move[0], y+move[1], num);
-            if (solveKnightsTour(board, x+move[0], y+move[1], num + 1)) {
-                return true;
-            }
-            board.setPositionValue(x+move[0], y+move[1], -1);
+        while (!validMoves.isEmpty()) {
+            currentx += validMoves.getFirst()[0];
+            currenty += validMoves.getFirst()[1];
+            board.setPositionValue(currentx, currenty, nextSquare);
+            nextSquare++;
+            validMoves = getWarnsdorfRuleMoves(board, currentx, currenty);
         }
-        return false;
+        return nextSquare > numOfSquares;
     }
 
     /**
@@ -86,4 +135,3 @@ public final class KnightsTourSolver {
         return validMoves;
     }
 }
-
